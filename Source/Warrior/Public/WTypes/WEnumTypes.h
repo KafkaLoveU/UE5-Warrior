@@ -15,14 +15,14 @@ enum class EWValidType : uint8
 };
 
 UENUM()
-enum class SuccessType : uint8
+enum class EWSuccessType : uint8
 {
 	Successful,
 	Failed,
 };
 
 UENUM()
-enum class EWCountdownActionIntput : uint8
+enum class EWCountdownActionInput : uint8
 {
 	Start,
 	Cancel,

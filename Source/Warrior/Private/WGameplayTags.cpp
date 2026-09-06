@@ -12,6 +12,7 @@ namespace WTags
 	UE_DEFINE_GAMEPLAY_TAG(Input_LightAttack_Axe, "Input.LightAttack.Axe");
 	UE_DEFINE_GAMEPLAY_TAG(Input_HeavyAttack_Axe, "Input.HeavyAttack.Axe");
 	UE_DEFINE_GAMEPLAY_TAG(Input_Roll, "Input.Roll");
+	UE_DEFINE_GAMEPLAY_TAG(Input_Jump, "Input.Jump");
 	UE_DEFINE_GAMEPLAY_TAG(Input_SwitchTarget, "Input.SwitchTarget");
 	UE_DEFINE_GAMEPLAY_TAG(Input_MustBeHeld, "Input.MustBeHeld");
 	UE_DEFINE_GAMEPLAY_TAG(Input_MustBeHeld_Block, "Input.MustBeHeld.Block");
@@ -30,6 +31,7 @@ namespace WTags
 	UE_DEFINE_GAMEPLAY_TAG(Player_Ability_Attack_Heavy_Axe, "Player.Ability.Attack.Heavy.Axe");
 	UE_DEFINE_GAMEPLAY_TAG(Player_Ability_HitPause, "Player.Ability.HitPause");
 	UE_DEFINE_GAMEPLAY_TAG(Player_Ability_Roll, "Player.Ability.Roll");
+	UE_DEFINE_GAMEPLAY_TAG(Player_Ability_Jump, "Player.Ability.Jump");
 	UE_DEFINE_GAMEPLAY_TAG(Player_Ability_Block, "Player.Ability.Block");
 	UE_DEFINE_GAMEPLAY_TAG(Player_Ability_TargetLock, "Player.Ability.TargetLock");
 	UE_DEFINE_GAMEPLAY_TAG(Player_Ability_Rage, "Player.Ability.Rage");

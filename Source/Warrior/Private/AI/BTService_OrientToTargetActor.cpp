@@ -48,15 +48,22 @@ void UBTService_OrientToTargetActor::TickNode(UBehaviorTreeComponent& OwnerComp,
 	UObject* ActorObject = OwnerComp.GetBlackboardComponent()->GetValueAsObject(InTargetActorKey.SelectedKeyName);
 	AActor* TargetActor	 = Cast<AActor>(ActorObject);
 
-	APawn* OwningPawn = OwnerComp.GetAIOwner()->GetPawn();
+	AAIController* AIC = OwnerComp.GetAIOwner();
+	if (!AIC) return;
+
+	APawn* OwningPawn = AIC->GetPawn();
+	if (!OwningPawn) return;
 
 	// Debug::Print(FString::Printf(TEXT("Tick %s"), *OwningPawn->GetName()) );
 
-	if (OwningPawn && TargetActor)
+	if (!TargetActor || !IsValid(TargetActor))
 	{
+		return;
+	}
+
 		const FRotator LookAtRot = UKismetMathLibrary::FindLookAtRotation(OwningPawn->GetActorLocation(), TargetActor->GetActorLocation());
 		const FRotator TargetRot = FMath::RInterpTo(OwningPawn->GetActorRotation(), LookAtRot, DeltaSeconds, RotationInterpSpeed);
 
 		OwningPawn->SetActorRotation(TargetRot);
-	}
+
 }

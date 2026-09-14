@@ -16,8 +16,10 @@
 | **锁定目标** | 切换目标（左/右），镜头追踪 |
 | **怒气系统** | 积攒怒气，怒气满可爆发 |
 | **武器特殊技** | 斧头轻重特殊攻击（含跳劈）|
-| **敌人 AI** | 行为树驱动，近战/远程/召唤多种敌人 |
+| **跳跃** | 蓝图技能 GA_Hero_Jump，走通「加标签 → 配输入 → 建技能类 → 注册数据资产」流程 |
+| **敌人 AI** | 行为树驱动，近战/远程/召唤多种敌人，残血会脱离战斗逃跑 |
 | **拾取物** | 场景中拾取石头资源 |
+| **主菜单 / 暂停菜单** | 开始游戏、选项、退出；游戏内暂停、返回主菜单、退出 |
 
 ---
 
@@ -80,6 +82,88 @@ UAbilitySystemComponent
 
 ---
 
+## 🤖 敌人 AI（行为树）
+
+```
+Blackboard: BB_Enemy_Base
+├─ TargetActor / DistToTarget     目标 Actor 与距离
+├─ HealthPercent                  血量百分比（自定义 Service 写入）
+└─ RetreatLocation                逃跑坐标（自定义 Service 写入）
+
+Behavior Tree: BT_Glacer / BT_Guardian
+Root
+└─ Service: Update Health Percent + Calculate Retreat Location
+   └─ Selector
+      ├─ 近战分支      DistToTarget ≤ 250
+      ├─ 远程分支      DistToTarget ≥ 650
+      ├─ 找射击位分支  EQS 查询射击位置
+      └─ 残血逃跑分支  HealthPercent < 0.3（Observer Aborts = Both）
+```
+
+两个用 C++ 扩展的自定义 `UBTService`：
+
+| 类 | 职责 |
+|------|------|
+| `UBTService_UpdateHealthPercent` | 每 0.2s 从 ASC 取 `UWAttributeSet`，算出 `当前血量 / 最大血量` 写入黑板 |
+| `UBTService_CalculateRetreatLocation` | 按 `自身位置 - 目标位置` 求反方向，乘以逃跑距离，算出逃跑点写入黑板 |
+
+> **踩坑记录（均为实际排查过的问题）**
+> - `UBTService` 构造函数**必须**调用 `INIT_SERVICE_NODE_NOTIFY_FLAGS()`，否则引擎不会调用 `TickNode()`，服务挂上去毫无效果（`BTTask` 对应 `INIT_TASK_NODE_NOTIFY_FLAGS()`）。
+> - `FBlackboardKeySelector` 必须在 `InitializeFromAsset()` 里调用 `ResolveSelectedKey(*BBAsset)` 才会生效。
+> - `Interval` 不能设 0：逐帧写黑板会让带 `Observer Aborts` 的装饰器每帧重算、引起行为树抖动，本项目取 0.2s。
+> - 血量必须从 `ASC->GetSet<UWAttributeSet>()` 取：基类成员指针持有的那个实例并没有被 ASC 注册，GE 只作用于 ASC 内的实例，用成员指针会读到恒定 1.0 的假数据。
+
+---
+
+## ♻️ 对象池（投掷物）
+
+```
+UWProjectilePoolSubsystem : UWorldSubsystem
+├─ TMap<TSubclassOf<AActor>, FActorPool>   按精确子类分桶，池与池互不干扰
+│    └─ FActorPool { AllActors, FreeActors }
+├─ AcquireProjectile()   取：优先复用 Free 队列，池空才 Spawn，超过 MaxPoolSize 则丢弃
+└─ ReleaseProjectile()   还：停组件、关碰撞、隐藏，并挪到地图外远点
+
+IProjectilePoolableInterface（蓝图 / C++ 双实现协议）
+├─ OnAcquiredFromPool()    重置伤害 Spec、Transform、碰撞、Niagara 与寿命定时器
+├─ OnReleasedToPool()      停表现、清状态
+├─ OnRemovedFromPool()     池被销毁时真正 Destroy
+└─ GetPoolableProjectileClass()
+
+UWProjectilePoolStatics : UBlueprintFunctionLibrary
+├─ Spawn Projectile From Pool   （引脚与 SpawnActor 对齐，蓝图可直接换节点）
+└─ Return Projectile To Pool
+```
+
+**关键改造点**
+
+- 敌方火球由 `SpawnActor` / `Destroy` 改为 `Acquire` / `Release`，消除高频弹幕反复创建销毁 Actor 带来的 GC 压力。
+- 禁用 `InitialLifeSpan`：引擎到期会直接 `Destroy()`，绕过回池逻辑；改用自管 `FTimerHandle`，到期调 `ReturnToPool()`。
+- 复用实例时必须 `Reset()` 命中记录，否则第二发飞出去会跳过打过的同一目标。
+- 接口方法必须标 `UFUNCTION(BlueprintNativeEvent)`，UHT 才会生成 `Execute_xxx` 桥接函数与 `xxx_Implementation` 虚函数（纯 C++ 虚函数两者都不生成，会编译报错）。
+
+---
+
+## 🖥️ UI 与游戏流程
+
+```
+MainMenuMap（GameDefaultMap）
+└─ WB_MainMenu : UWUserWidgetBase
+   ├─ StartGame  → 加载战斗关卡
+   ├─ Options    → WB_OptionsMenu
+   └─ Quit       → QuitGame
+
+暂停菜单 WB_PauseScreen : UWUserWidgetBase
+├─ Back       → SetGamePaused(false)
+├─ MainMenu   → OpenLevel(MainMenuMap)
+└─ Quit       → QuitGame
+```
+
+- 关卡用 `GameplayTag`（`GameData.Level.*`）在 `UWGameInstance` 里登记，按标签取 `TSoftObjectPtr<UWorld>`；切图时用 `MoviePlayer` 显示加载屏。
+- 暂停菜单由 `IA_PauseMenu`（Enhanced Input）触发，`UWUserWidgetBase` 作为 C++ 基类统一 UMG 与 C++ 的交互入口。
+
+---
+
 ## 📁 目录结构
 
 ```
@@ -90,11 +174,15 @@ Source/Warrior/
 │   ├── Components/
 │   │   ├── Combat/          # 战斗组件（武器注册、碰撞、伤害）
 │   │   └── UI/              # UI 广播组件
+│   ├── AI/                  # 自定义行为树节点（BTService）
 │   ├── Controllers/         # 玩家/AI 控制器
 │   ├── AnimInstances/       # 动画实例
 │   ├── DataAssets/          # 输入配置、StartUp 数据资产
 │   ├── GameMode/            # 游戏模式
-│   ├── Interfaces/          # 解耦接口
+│   ├── Interfaces/          # 解耦接口（含对象池协议 ProjectilePoolableInterface）
+│   ├── Subsystems/          # 世界子系统（投掷物对象池）
+│   ├── Widgets/             # UMG 基类
+│   ├── WarriorTypes/        # 蓝图函数库（对象池蓝图入口）
 │   └── Items/Weapons/       # 武器
 Content/
 └── Blueprints/              # 技能/角色/UI 蓝图（继承 C++ 类）
@@ -122,6 +210,7 @@ Content/
 ```
 
 > ⚠️ 首次打开会自动编译 C++，需等待 5-15 分钟。
+> 启动后进入主菜单（MainMenuMap），点「开始游戏」进入战斗关卡。
 
 ---
 
@@ -131,6 +220,9 @@ Content/
 - **GameplayTag**：技能/状态统一用标签标识，支持精确/模糊匹配激活
 - **Enhanced Input**：InputAction + InputMappingContext 替代旧输入系统
 - **数据驱动**：技能/属性由 DataAsset 配置，数值策划无需改代码
+- **行为树 / 黑板**：AI 决策与数据解耦，用 C++ 扩展 BTService 把运行时数据（血量、逃跑点）喂给黑板
+- **UWorldSubsystem**：随 World 创建与销毁，作为对象池的生命周期容器，关卡切换时自动回收
+- **对象池模式**：高频生成销毁的对象（投掷物）走池化复用，用接口协议解耦池与具体对象类型
 
 ---
 

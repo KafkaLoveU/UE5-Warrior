@@ -114,4 +114,7 @@ private:
 public:
 	UFUNCTION(BlueprintCallable)
 	void RegisterSpawnedEnemies(const TArray<AWEnemyCharacter*>& InEnemiesToRegister);
+
+	// 供 GameInstance 在退出到主菜单前调用，捕捉退出那一刻的真实血量/怒气等
+	void SaveCurrentProgress();
 };

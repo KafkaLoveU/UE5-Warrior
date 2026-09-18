@@ -233,14 +233,24 @@ void UWFunctionLibrary::ToggleInputMode(const UObject* WorldContextObject, EWInp
 
 void UWFunctionLibrary::SaveCurrentGameDifficulty(EWGameDifficulty InDifficultyToSave)
 {
-	USaveGame* SaveGameObject = UGameplayStatics::CreateSaveGameObject(UWSaveGame::StaticClass());
+	// B 档后难度并入 UWSaveGame::PlayerData。这里只更新难度字段，
+	// 先从已有存档读回完整 PlayerData 再写回，避免覆盖 B 档统一存档（波数/属性/装备）。
+	const FString SlotName = WTags::GameData_SaveGame_Slot_1.GetTag().ToString();
 
-	if (UWSaveGame* WSaveGameObject = Cast<UWSaveGame>(SaveGameObject))
+	UWSaveGame* WSaveGameObject = nullptr;
+	if (UGameplayStatics::DoesSaveGameExist(SlotName, 0))
 	{
-		WSaveGameObject->SavedCurrentGameDifficulty = InDifficultyToSave;
+		WSaveGameObject = Cast<UWSaveGame>(UGameplayStatics::LoadGameFromSlot(SlotName, 0));
+	}
+	if (!WSaveGameObject)
+	{
+		WSaveGameObject = Cast<UWSaveGame>(UGameplayStatics::CreateSaveGameObject(UWSaveGame::StaticClass()));
+	}
 
-		const FString SlotName = WTags::GameData_SaveGame_Slot_1.GetTag().ToString();
-		const bool bWasSaved = UGameplayStatics::SaveGameToSlot(WSaveGameObject, SlotName, 0);
+	if (WSaveGameObject)
+	{
+		WSaveGameObject->PlayerData.Difficulty = InDifficultyToSave;
+		UGameplayStatics::SaveGameToSlot(WSaveGameObject, SlotName, 0);
 	}
 }
 
@@ -254,7 +264,7 @@ bool UWFunctionLibrary::TryLoadSavedGameDifficulty(EWGameDifficulty& OutSavedDif
 
 		if (UWSaveGame* WSaveGameObject = Cast<UWSaveGame>(SaveGameObject))
 		{
-			OutSavedDifficulty = WSaveGameObject->SavedCurrentGameDifficulty;
+			OutSavedDifficulty = WSaveGameObject->PlayerData.Difficulty;
 
 			return true;
 		}

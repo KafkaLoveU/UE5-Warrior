@@ -65,6 +65,14 @@ private:
 	void Input_AbilityInputReleased(FGameplayTag InInputTag);
 #pragma endregion
 
+#pragma region Continue Save
+	// 续关：记录需要还原的装备武器 Tag，等角色被 Possess 后再触发 Equip 能力，
+	// 避免 BeginPlay 过早激活导致 AnimInstance/Controller 未就绪、武器姿势异常
+	FGameplayTag PendingContinueEquipWeaponTag;
+	bool bPendingContinueEquip = false;
+	void TryRestoreContinueEquip();
+#pragma endregion
+
 public:
 	FORCEINLINE UHeroCombatComponent* GetHeroCombatComponent() const { return HeroCombatComponent; }
 };

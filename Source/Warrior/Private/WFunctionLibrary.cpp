@@ -11,6 +11,7 @@
 #include "WTypes/WCountdownAction.h"
 #include "WGameInstance.h" 
 #include "SaveGame/WSaveGame.h"
+#include "SaveGame/WGameSaveSubsystem.h"
 
 
 UWAbilitySystemComponent* UWFunctionLibrary::GetWarriorASCFromActor(const AActor* InActor)
@@ -231,11 +232,11 @@ void UWFunctionLibrary::ToggleInputMode(const UObject* WorldContextObject, EWInp
 	}
 }
 
-void UWFunctionLibrary::SaveCurrentGameDifficulty(EWGameDifficulty InDifficultyToSave)
+void UWFunctionLibrary::SaveCurrentGameDifficulty(EWGameDifficulty InDifficultyToSave, int32 SlotIndex)
 {
 	// B 档后难度并入 UWSaveGame::PlayerData。这里只更新难度字段，
 	// 先从已有存档读回完整 PlayerData 再写回，避免覆盖 B 档统一存档（波数/属性/装备）。
-	const FString SlotName = WTags::GameData_SaveGame_Slot_1.GetTag().ToString();
+	const FString SlotName = UWGameSaveSubsystem::GetSlotName(SlotIndex);
 
 	UWSaveGame* WSaveGameObject = nullptr;
 	if (UGameplayStatics::DoesSaveGameExist(SlotName, 0))
@@ -254,9 +255,9 @@ void UWFunctionLibrary::SaveCurrentGameDifficulty(EWGameDifficulty InDifficultyT
 	}
 }
 
-bool UWFunctionLibrary::TryLoadSavedGameDifficulty(EWGameDifficulty& OutSavedDifficulty)
+bool UWFunctionLibrary::TryLoadSavedGameDifficulty(EWGameDifficulty& OutSavedDifficulty, int32 SlotIndex)
 {
-	const FString SlotName = WTags::GameData_SaveGame_Slot_1.GetTag().ToString();
+	const FString SlotName = UWGameSaveSubsystem::GetSlotName(SlotIndex);
 
 	if (UGameplayStatics::DoesSaveGameExist(SlotName, 0))
 	{

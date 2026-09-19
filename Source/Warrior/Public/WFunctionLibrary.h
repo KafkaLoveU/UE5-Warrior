@@ -61,8 +61,8 @@ public:
 	static void ToggleInputMode(const UObject* WorldContextObject, EWInputMode  InInputMode);
 
 	UFUNCTION(BlueprintCallable,Category = "Warrior|FunctionLibrary")
-	static void SaveCurrentGameDifficulty(EWGameDifficulty InDifficultyToSave);
+	static void SaveCurrentGameDifficulty(EWGameDifficulty InDifficultyToSave, int32 SlotIndex = 0);
 
 	UFUNCTION(BlueprintCallable,Category = "Warrior|FunctionLibrary")
-	static bool TryLoadSavedGameDifficulty(EWGameDifficulty& OutSavedDifficulty);
+	static bool TryLoadSavedGameDifficulty(EWGameDifficulty& OutSavedDifficulty, int32 SlotIndex = 0);
 };

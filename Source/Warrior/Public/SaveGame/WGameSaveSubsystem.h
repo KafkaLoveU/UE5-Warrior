@@ -19,24 +19,29 @@ class WARRIOR_API UWGameSaveSubsystem : public UGameInstanceSubsystem
 public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 
-	/** 存一局完整进度（波数 + 难度 + 角色成长属性 + 装备）。内部走「先读旧档 → 改字段 → 写回」。 */
-	UFUNCTION(BlueprintCallable, Category = "Warrior|Save")
-	void SaveGame(const FWPlayerSaveData& InData);
+	// 可用存档槽数量（3 个：槽 1 / 2 / 3）
+	static constexpr int32 MaxSaveSlots = 3;
 
-	/** 读取存档到 OutData。无存档或读取出错返回 false。 */
-	UFUNCTION(BlueprintCallable, Category = "Warrior|Save")
-	bool TryLoadGame(FWPlayerSaveData& OutData);
+	/** 槽位索引(0/1/2) → 磁盘存档名。越界自动夹到 [0, MaxSaveSlots-1]。 */
+	static FString GetSlotName(int32 SlotIndex = 0);
 
-	/** 是否存在存档。 */
+	/** 存一局完整进度（波数 + 难度 + 角色成长属性 + 装备）。内部走「先读旧档 → 改字段 → 写回」。
+	 *  SlotIndex 指定写入哪个槽（默认 0 = 槽 1）。 */
+	UFUNCTION(BlueprintCallable, Category = "Warrior|Save")
+	void SaveGame(const FWPlayerSaveData& InData, int32 SlotIndex = 0);
+
+	/** 读取指定槽存档到 OutData。无存档或读取出错返回 false。 */
+	UFUNCTION(BlueprintCallable, Category = "Warrior|Save")
+	bool TryLoadGame(FWPlayerSaveData& OutData, int32 SlotIndex = 0);
+
+	/** 指定槽是否存在存档。 */
 	UFUNCTION(BlueprintPure, Category = "Warrior|Save")
-	bool HasSave() const;
+	bool HasSave(int32 SlotIndex = 0) const;
 
-	/** 删除存档（慎用）。 */
+	/** 删除指定槽存档（慎用）。 */
 	UFUNCTION(BlueprintCallable, Category = "Warrior|Save")
-	void DeleteSave();
+	void DeleteSave(int32 SlotIndex = 0);
 
 private:
-	FString GetSlotName() const;
-
 	static constexpr int32 CurrentSaveVersion = 1;
 };

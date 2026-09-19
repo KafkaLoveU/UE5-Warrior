@@ -30,7 +30,7 @@ void AWSurvivalGameMode::InitGame(const FString& MapName, const FString& Options
 			if (UWGameSaveSubsystem* SaveSubsystem = GameInstance->GetSubsystem<UWGameSaveSubsystem>())
 			{
 				FWPlayerSaveData LoadedData;
-				if (SaveSubsystem->TryLoadGame(LoadedData))
+				if (SaveSubsystem->TryLoadGame(LoadedData, GameInstance->ActiveSaveSlot))
 				{
 					CurrentGameDifficulty = LoadedData.Difficulty;
 				}
@@ -43,7 +43,7 @@ void AWSurvivalGameMode::InitGame(const FString& MapName, const FString& Options
 			{
 				FWPlayerSaveData LoadedData;
 
-				if (SaveSubsystem->TryLoadGame(LoadedData))
+				if (SaveSubsystem->TryLoadGame(LoadedData, GameInstance->ActiveSaveSlot))
 				{
 					CurrentWaveCount = LoadedData.WaveCount;
 					CurrentGameDifficulty = LoadedData.Difficulty;
@@ -111,7 +111,7 @@ void AWSurvivalGameMode::SaveCurrentProgress()
 				}
 			}
 
-			SaveSubsystem->SaveGame(Data);
+			SaveSubsystem->SaveGame(Data, GameInstance->ActiveSaveSlot);
 		}
 	}
 }

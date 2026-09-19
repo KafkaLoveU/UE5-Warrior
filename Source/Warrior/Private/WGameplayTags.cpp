@@ -97,5 +97,7 @@ namespace WTags
 	UE_DEFINE_GAMEPLAY_TAG(GameData_Level_SurvivalGameModeMap, "GameData.Level.SurvivalGameModeMap");
 	UE_DEFINE_GAMEPLAY_TAG(GameData_Level_MainMenuMap, "GameData.Level.MainMenuMap");
 	UE_DEFINE_GAMEPLAY_TAG(GameData_SaveGame_Slot_1, "GameData.SaveGame.Slot.1");
+	UE_DEFINE_GAMEPLAY_TAG(GameData_SaveGame_Slot_2, "GameData.SaveGame.Slot.2");
+	UE_DEFINE_GAMEPLAY_TAG(GameData_SaveGame_Slot_3, "GameData.SaveGame.Slot.3");
 #pragma endregion
 }

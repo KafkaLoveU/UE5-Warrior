@@ -11,19 +11,26 @@ void UWGameSaveSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	Super::Initialize(Collection);
 }
 
-FString UWGameSaveSubsystem::GetSlotName() const
+FString UWGameSaveSubsystem::GetSlotName(int32 SlotIndex)
 {
-	return WTags::GameData_SaveGame_Slot_1.GetTag().ToString();
+	SlotIndex = FMath::Clamp(SlotIndex, 0, MaxSaveSlots - 1);
+	switch (SlotIndex)
+	{
+		case 1: return WTags::GameData_SaveGame_Slot_2.GetTag().ToString();
+		case 2: return WTags::GameData_SaveGame_Slot_3.GetTag().ToString();
+		default: return WTags::GameData_SaveGame_Slot_1.GetTag().ToString();
+	}
 }
 
-void UWGameSaveSubsystem::SaveGame(const FWPlayerSaveData& InData)
+void UWGameSaveSubsystem::SaveGame(const FWPlayerSaveData& InData, int32 SlotIndex)
 {
 	// 关键：先尝试读旧档，没有再新建 —— 否则多字段存档会被互相覆盖
+	const FString SlotName = GetSlotName(SlotIndex);
 	UWSaveGame* SaveObject = nullptr;
 
-	if (UGameplayStatics::DoesSaveGameExist(GetSlotName(), 0))
+	if (UGameplayStatics::DoesSaveGameExist(SlotName, 0))
 	{
-		SaveObject = Cast<UWSaveGame>(UGameplayStatics::LoadGameFromSlot(GetSlotName(), 0));
+		SaveObject = Cast<UWSaveGame>(UGameplayStatics::LoadGameFromSlot(SlotName, 0));
 	}
 
 	if (!SaveObject)
@@ -39,17 +46,18 @@ void UWGameSaveSubsystem::SaveGame(const FWPlayerSaveData& InData)
 	SaveObject->SaveVersion = CurrentSaveVersion;
 	SaveObject->PlayerData = InData;
 
-	UGameplayStatics::SaveGameToSlot(SaveObject, GetSlotName(), 0);
+	UGameplayStatics::SaveGameToSlot(SaveObject, SlotName, 0);
 }
 
-bool UWGameSaveSubsystem::TryLoadGame(FWPlayerSaveData& OutData)
+bool UWGameSaveSubsystem::TryLoadGame(FWPlayerSaveData& OutData, int32 SlotIndex)
 {
-	if (!HasSave())
+	const FString SlotName = GetSlotName(SlotIndex);
+	if (!UGameplayStatics::DoesSaveGameExist(SlotName, 0))
 	{
 		return false;
 	}
 
-	if (UWSaveGame* SaveObject = Cast<UWSaveGame>(UGameplayStatics::LoadGameFromSlot(GetSlotName(), 0)))
+	if (UWSaveGame* SaveObject = Cast<UWSaveGame>(UGameplayStatics::LoadGameFromSlot(SlotName, 0)))
 	{
 		OutData = SaveObject->PlayerData;
 		return true;
@@ -58,15 +66,16 @@ bool UWGameSaveSubsystem::TryLoadGame(FWPlayerSaveData& OutData)
 	return false;
 }
 
-bool UWGameSaveSubsystem::HasSave() const
+bool UWGameSaveSubsystem::HasSave(int32 SlotIndex) const
 {
-	return UGameplayStatics::DoesSaveGameExist(GetSlotName(), 0);
+	return UGameplayStatics::DoesSaveGameExist(GetSlotName(SlotIndex), 0);
 }
 
-void UWGameSaveSubsystem::DeleteSave()
+void UWGameSaveSubsystem::DeleteSave(int32 SlotIndex)
 {
-	if (HasSave())
+	const FString SlotName = GetSlotName(SlotIndex);
+	if (UGameplayStatics::DoesSaveGameExist(SlotName, 0))
 	{
-		UGameplayStatics::DeleteGameInSlot(GetSlotName(), 0);
+		UGameplayStatics::DeleteGameInSlot(SlotName, 0);
 	}
 }

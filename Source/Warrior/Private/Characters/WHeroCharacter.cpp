@@ -107,12 +107,6 @@ void AWHeroCharacter::TryRestoreContinueEquip()
 
 	const FGameplayTag EquippedTag = PendingContinueEquipWeaponTag;
 
-	// 续关还原武器：完全复刻"玩家手动按一次装备键"的完整路径——调用 OnAbilityInputPressed(Input.EquipAxe)，
-	// 其内部对匹配 DynamicAbilityTags 的装备能力执行 TryActivateAbility，与正常游戏手动按键走完全一致的逻辑
-	//（能力自身负责 Spawn 武器、播放 AM_Hero_Axe_Equip montage、由 AnimNotify 发送
-	//  Player.Event.Equip.Axe 把武器从背上拔到手上、并设置 CurrentEquippedWeaponTag）。
-	// 注意：这里【不要】手动调用 SetCurrentEquipWeaponByTag / SendGameplayEvent，
-	// 否则会绕过或覆盖能力自身的装备流程，导致武器停在背上（之前多版的根因）。
 	FTimerDelegate RestoreWeaponDelegate;
 	RestoreWeaponDelegate.BindWeakLambda(this, [this, EquippedTag]()
 	{
@@ -128,9 +122,9 @@ void AWHeroCharacter::TryRestoreContinueEquip()
 			return;
 		}
 
-		// 判断是否已“拔刀在手上”：CurrentEquippedWeaponTag 被装备能力设为斧头标签即代表已装备。
-		// 续关时武器可能已自动 Spawn 并注册（CharacterCarriedWeaponMap 有），但处于“挂在背上/未拔”状态，
-		// 此时 CurrentEquippedWeaponTag 不是斧头标签，需要触发装备能力的拔刀逻辑把它拔到手上。
+		// 以 CurrentEquippedWeaponTag 判断是否已"拔刀在手上"：续关时武器可能已自动 Spawn 并注册
+		// （CharacterCarriedWeaponMap 有），但处于"挂在背上/未拔"状态，此时 CurrentEquippedWeaponTag
+		// 不是斧头标签，需要触发装备能力的拔刀逻辑把它拔到手上。
 		auto IsDrawn = [&]() { return HC->CurrentEquippedWeaponTag == EquippedTag; };
 
 		if (IsDrawn())

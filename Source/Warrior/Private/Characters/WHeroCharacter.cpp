@@ -10,6 +10,8 @@
 #include "Components/UI/HeroUIComponent.h"
 #include "Components/UI/PawnUIComponent.h"
 #include "Components/Combat/HeroCombatComponent.h"
+#include "Components/Inventory/WInventoryComponent.h"
+#include "Widgets/WInventoryWidget.h"
 #include "EnhancedInputSubsystems.h"
 #include "DataAssets/Input/DataAsset_InputConfig.h"
 #include "WGameplayTags.h"
@@ -46,6 +48,8 @@ AWHeroCharacter::AWHeroCharacter()
 	HeroCombatComponent = CreateDefaultSubobject<UHeroCombatComponent>("HeroCombatComponent");
 
 	HeroUIComponent = CreateDefaultSubobject<UHeroUIComponent>("HeroUIComponent");
+
+	InventoryComponent = CreateDefaultSubobject<UWInventoryComponent>("InventoryComponent");
 }
 
 UPawnCombatComponent* AWHeroCharacter::GetPawnCombatComponent() const
@@ -191,13 +195,45 @@ void AWHeroCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 	WInputComponent->BindNativeInputAction(InputConfigDataAsset, WTags::Input_SwitchTarget, ETriggerEvent::Completed, this, &ThisClass::Input_SwitchTargetCompleted);
 
 	WInputComponent->BindNativeInputAction(InputConfigDataAsset, WTags::Input_Pickup_Stones, ETriggerEvent::Started, this, &ThisClass::Input_PickupStonesStarted);
-	
+
+	WInputComponent->BindNativeInputAction(InputConfigDataAsset, WTags::Input_OpenInventory, ETriggerEvent::Started, this, &ThisClass::Input_ToggleInventory);
+
 	WInputComponent->BindAbilityInputAction(InputConfigDataAsset, this, &ThisClass::Input_AbilityInputPressed, &ThisClass::Input_AbilityInputReleased);
 }
 
 void AWHeroCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+	// 背包 UI（Step 4）：需要 Controller 已 Possess 才能拿到 LocalPlayer 作为 Widget 的 Outer，
+	// 而角色 BeginPlay 可能早于 Possess，因此延迟到下一帧（Possess 必在同帧内完成）再创建，
+	// 保证 GetController() 有效、Widget 能正确拿到 owning pawn。
+	if (InventoryWidgetClass)
+	{
+	FTimerDelegate NextTickDelegate;
+	NextTickDelegate.BindLambda([this]()
+	{
+		if (!IsValid(this) || !GetWorld())
+		{
+			return;
+		}
+
+		if (APlayerController* PC = Cast<APlayerController>(GetController()))
+		{
+			if (PC->IsLocalPlayerController())
+			{
+				InventoryWidget = CreateWidget<UWInventoryWidget>(PC, InventoryWidgetClass);
+				if (InventoryWidget)
+				{
+					InventoryWidget->AddToViewport();
+					InventoryWidget->SetVisibility(ESlateVisibility::Collapsed);
+					InventoryWidget->BindToHeroUI(GetHeroUIComponent());
+				}
+			}
+		}
+	});
+	GetWorld()->GetTimerManager().SetTimerForNextTick(NextTickDelegate);
+	}
 
 	// 续关：从 GameInstance 的待恢复数据还原角色成长属性与装备
 	if (UWGameInstance* GameInstance = GetGameInstance<UWGameInstance>())
@@ -241,6 +277,12 @@ void AWHeroCharacter::BeginPlay()
 				PendingContinueEquipWeaponTag = Data.EquippedWeaponTag;
 				bPendingContinueEquip = true;
 				TryRestoreContinueEquip();
+			}
+
+			// 还原背包（Step 12）：清空后按存档顺序逐格导入
+			if (UWInventoryComponent* Inv = GetInventoryComponent())
+			{
+				Inv->ImportFromSaveData(Data);
 			}
 
 			GameInstance->bHasPendingPlayerData = false;
@@ -293,6 +335,17 @@ void AWHeroCharacter::Input_PickupStonesStarted(const FInputActionValue& InpuAct
 	FGameplayEventData Data;
 	FGameplayTag EventTag = WTags::Player_Event_ConsumeStones;
 	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(this, EventTag, Data);
+}
+
+void AWHeroCharacter::Input_ToggleInventory(const FInputActionValue& InputActionValue)
+{
+	UE_LOG(LogTemp, Log, TEXT("[Inventory] Toggle inventory requested"));
+
+	// 广播"开/关背包"事件给 UI 层（UHeroUIComponent 持有该委托，背包 Widget 订阅后做显隐切换）
+	if (UHeroUIComponent* HeroUI = GetHeroUIComponent())
+	{
+		HeroUI->OnToggleInventory.Broadcast();
+	}
 }
 
 void AWHeroCharacter::Input_AbilityInputPressed(FGameplayTag InInputTag)

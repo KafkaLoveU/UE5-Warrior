@@ -13,6 +13,8 @@ class UDataAsset_InputConfig;
 struct FInputActionValue;
 class UHeroCombatComponent;
 class UHeroUIComponent;
+class UWInventoryComponent;
+class UWInventoryWidget;
 
 UCLASS()
 class WARRIOR_API AWHeroCharacter : public AWBaseCharacter
@@ -46,6 +48,17 @@ private:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Default|UI", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UHeroUIComponent> HeroUIComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Default|Inventory", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UWInventoryComponent> InventoryComponent;
+
+	// 背包 UI 的 Widget Blueprint 类（在英雄 Blueprint 的 Class Defaults 里指定，如 WBP_Inventory）
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Default|Inventory", meta = (AllowPrivateAccess = "true"))
+	TSubclassOf<UWInventoryWidget> InventoryWidgetClass;
+
+	// 运行时创建的背包 Widget 实例（BeginPlay 中生成并加入视口，默认隐藏）
+	UPROPERTY()
+	TObjectPtr<UWInventoryWidget> InventoryWidget;
 #pragma endregion
 
 #pragma region Inputs
@@ -60,6 +73,7 @@ private:
 	void Input_SwitchTargetTriggered(const FInputActionValue& InputActionValue);
 	void Input_SwitchTargetCompleted(const FInputActionValue& InputActionValue);
 	void Input_PickupStonesStarted(const FInputActionValue& InputActionValue);
+	void Input_ToggleInventory(const FInputActionValue& InputActionValue);
 
 	void Input_AbilityInputPressed(FGameplayTag InInputTag);
 	void Input_AbilityInputReleased(FGameplayTag InInputTag);
@@ -75,4 +89,6 @@ private:
 
 public:
 	FORCEINLINE UHeroCombatComponent* GetHeroCombatComponent() const { return HeroCombatComponent; }
+	FORCEINLINE UWInventoryComponent* GetInventoryComponent() const { return InventoryComponent; }
+	FORCEINLINE UWInventoryWidget* GetInventoryWidget() const { return InventoryWidget; }
 };

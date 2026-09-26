@@ -22,6 +22,7 @@ namespace WTags
 	UE_DEFINE_GAMEPLAY_TAG(Input_SpecialWeaponAbility_Light, "Input.SpecialWeaponAbility.Light");
 	UE_DEFINE_GAMEPLAY_TAG(Input_SpecialWeaponAbility_Heavy, "Input.SpecialWeaponAbility.Heavy");
 	UE_DEFINE_GAMEPLAY_TAG(Input_Pickup_Stones, "Input.Pickup.Stones");
+	UE_DEFINE_GAMEPLAY_TAG(Input_OpenInventory, "Input.OpenInventory");
 #pragma endregion
 
 #pragma region Player Tags

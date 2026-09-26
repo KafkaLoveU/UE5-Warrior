@@ -24,12 +24,14 @@ namespace WTags
 	WARRIOR_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Input_SpecialWeaponAbility_Light);
 	WARRIOR_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Input_SpecialWeaponAbility_Heavy);
 	WARRIOR_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Input_Pickup_Stones);
+	WARRIOR_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Input_OpenInventory);
 #pragma endregion 
 
 #pragma region Player Tags
 	WARRIOR_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_Ability_Equip_Axe);
 	WARRIOR_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_Ability_Unequip_Axe);
 	WARRIOR_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_Ability_Attack_Light_Axe);
+	WARRIOR_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_Ability_Attack_Heavy_Axe);
 	WARRIOR_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_Ability_HitPause);
 	WARRIOR_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_Ability_Roll);
 	WARRIOR_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_Ability_Jump);
@@ -121,5 +123,3 @@ namespace WTags
 	WARRIOR_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameData_SaveGame_Slot_3);
 #pragma endregion
 }
-
-

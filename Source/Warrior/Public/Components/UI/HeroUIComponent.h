@@ -15,6 +15,9 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnAbilityIconSlotUpdatedDelegate, 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnAbilityCooldownBeginDelegate, FGameplayTag, AbilityInputTag, float, TotalCooldownTime, float, RemainingCooldownTime);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnStoneInteractedDelegate, bool, bShouldDisplayInputKey);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnToggleInventorySignature);
+
 /**
  *
  */
@@ -38,4 +41,8 @@ public:
 
 	UPROPERTY(BlueprintCallable, BlueprintAssignable)
 	FOnStoneInteractedDelegate OnStoneInteracted;
+
+	// 开/关背包：英雄按下 Input.OpenInventory 时广播；背包 UI（UWInventoryWidget）订阅它做显隐切换（Step 4）
+	UPROPERTY(BlueprintCallable, BlueprintAssignable)
+	FOnToggleInventorySignature OnToggleInventory;
 };

@@ -14,6 +14,7 @@
 #include "AbilitySystemInterface.h"
 #include "AbilitySystem/WAttributeSet.h"
 #include "Components/Combat/PawnCombatComponent.h"
+#include "Components/Inventory/WInventoryComponent.h"
 
 #include "WDebugHelper.h"
 
@@ -105,10 +106,16 @@ void AWSurvivalGameMode::SaveCurrentProgress()
 					}
 				}
 
-				if (UPawnCombatComponent* PCC = HeroPawn->FindComponentByClass<UPawnCombatComponent>())
-				{
-					Data.EquippedWeaponTag = PCC->CurrentEquippedWeaponTag;
-				}
+			if (UPawnCombatComponent* PCC = HeroPawn->FindComponentByClass<UPawnCombatComponent>())
+			{
+				Data.EquippedWeaponTag = PCC->CurrentEquippedWeaponTag;
+			}
+
+			// 收集背包物品（Step 12）
+			if (UWInventoryComponent* Inv = HeroPawn->FindComponentByClass<UWInventoryComponent>())
+			{
+				Inv->ExportToSaveData(Data);
+			}
 			}
 
 			SaveSubsystem->SaveGame(Data, GameInstance->ActiveSaveSlot);

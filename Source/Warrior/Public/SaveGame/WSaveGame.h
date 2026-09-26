@@ -6,6 +6,7 @@
 #include "GameFramework/SaveGame.h"
 #include "GameplayTagContainer.h"
 #include "WTypes/WEnumTypes.h"
+#include "Items/Inventory/WItemDefinition.h"
 #include "WSaveGame.generated.h"
 
 /**
@@ -46,6 +47,10 @@ struct WARRIOR_API FWPlayerSaveData
 	// B 档：已装备武器标签（None 表示未装备）
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Save")
 	FGameplayTag EquippedWeaponTag;
+
+	// B 档：背包物品列表（Step 12）。FWInventoryItem 内部是软引用 + 数量，天然可序列化；按格子顺序保存。
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Save")
+	TArray<FWInventoryItem> InventoryItems;
 };
 
 /**

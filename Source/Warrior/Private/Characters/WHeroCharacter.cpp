@@ -290,6 +290,28 @@ void AWHeroCharacter::BeginPlay()
 	}
 }
 
+void AWHeroCharacter::OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PrevCustomMode)
+{
+	Super::OnMovementModeChanged(PrevMovementMode, PrevCustomMode);
+
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
+	if (!ASC)
+	{
+		return;
+	}
+
+	const EMovementMode CurrentMode = GetCharacterMovement()->MovementMode;
+
+	if (CurrentMode == EMovementMode::MOVE_Falling)
+	{
+		ASC->AddLooseGameplayTag(WTags::Player_Status_Jumping);
+	}
+	else if (PrevMovementMode == EMovementMode::MOVE_Falling)
+	{
+		ASC->RemoveLooseGameplayTag(WTags::Player_Status_Jumping);
+	}
+}
+
 void AWHeroCharacter::Input_Move(const FInputActionValue& InputActionValue)
 {
 	const FVector2D MovementVector = InputActionValue.Get<FVector2D>();

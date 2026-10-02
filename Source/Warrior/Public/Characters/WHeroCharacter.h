@@ -4,6 +4,7 @@
 
 #include "Characters/WBaseCharacter.h"
 #include "GameplayTagContainer.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 #include "WHeroCharacter.generated.h"
 
@@ -34,6 +35,7 @@ protected:
 
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	virtual void BeginPlay() override;
+	virtual void OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PrevCustomMode) override;
 
 private:
 #pragma region Components

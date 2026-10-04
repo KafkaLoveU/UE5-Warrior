@@ -28,7 +28,8 @@ DECLARE_LOG_CATEGORY_EXTERN(LogWProjectilePool, Log, All);
  * 增长策略（懒扩容）：
  *   - 首次 SpawnProjectileFromPool：池为空 → 创建一个对象（不预热）。
  *   - 池空了才扩容，每次 +1，避免一次性占用过多内存。
- *   - 设置 MaxPoolSize 软上限：超过则丢弃新对象（防止关卡死循环）。
+ *   - 设置 MaxPoolSize 软上限：池满且无可复用空闲对象时，复用最旧活跃实例
+ *     （不丢投掷物、不无限扩容）；仅在全部为失效弱引用时才兜底新建。
  */
 UCLASS()
 class WARRIOR_API UWProjectilePoolSubsystem : public UWorldSubsystem
@@ -48,7 +49,7 @@ public:
 	 * @param SpawnTransform    出现位置/朝向
 	 * @param Instigator        伤害的发起者（用于 GAS spec 计算）
 	 * @param DamageSpecHandle  已构造好的伤害 GE spec
-	 * @return                  可用实例；池空了且超过 MaxPoolSize 时返回 nullptr
+	 * @return                  可用实例；池满时复用最旧活跃实例，极端情况（全是失效弱引用）才返回 nullptr
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Warrior|ProjectilePool")
 	AActor* AcquireProjectile(TSubclassOf<AActor> ProjectileClass,
@@ -87,6 +88,15 @@ private:
 	                                const FTransform& SpawnTransform,
 	                                AActor* Instigator,
 	                                const FGameplayEffectSpecHandle& DamageSpecHandle);
+
+	/**
+	 * 池已满时复用最旧的活跃实例（不丢投掷物、不无限扩容）。
+	 * 遍历 AllActors，顺手清理失效弱引用，跳过空闲实例，把第一个有效活跃实例
+	 * 复位后作为新发射体返回；若全为失效引用则返回 nullptr。
+	 */
+	AActor* RecycleOldestActiveInstance(FActorPool& Pool,
+	                                    const FTransform& SpawnTransform,
+	                                    const FGameplayEffectSpecHandle& DamageSpecHandle);
 
 	/** 关卡销毁时调 OnRemovedFromPool 真正释放。 */
 	void DestroyPoolContents();

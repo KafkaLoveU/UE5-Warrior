@@ -62,13 +62,21 @@ AActor* UWProjectilePoolSubsystem::AcquireProjectile(TSubclassOf<AActor> Project
 		// 如果 WeakPtr 已失效（GC 走了一半），循环下一个
 	}
 
-	// 2) Free 队列为空 → 创建新实例。
+	// 2) Free 队列为空 → 池未满则新建；已满则复用最旧活跃实例（不丢投掷物、不无限扩容）。
 	if (Pool.AllActors.Num() >= MaxPoolSize)
 	{
+		if (AActor* Recycled = RecycleOldestActiveInstance(Pool, SpawnTransform, DamageSpecHandle))
+		{
+			UE_LOG(LogWProjectilePool, Warning,
+				TEXT("[ProjectilePool] Pool for class '%s' is full (MaxPoolSize=%d). Reusing oldest active instance instead of dropping."),
+				*ProjectileClass->GetName(), MaxPoolSize);
+			Recycled->SetInstigator(Cast<APawn>(Instigator));
+			return Recycled;
+		}
+		// 回收不到（全为失效弱引用）→ 兜底新建，避免直接丢弃投掷物。
 		UE_LOG(LogWProjectilePool, Warning,
-			TEXT("[ProjectilePool] Pool for class '%s' is full (MaxPoolSize=%d). Skipping acquire."),
-			*ProjectileClass->GetName(), MaxPoolSize);
-		return nullptr;
+			TEXT("[ProjectilePool] Pool for class '%s' is full and no recyclable instance found. Creating overflow instance."),
+			*ProjectileClass->GetName());
 	}
 
 	return CreateNewPooledInstance(ProjectileClass, SpawnTransform, Instigator, DamageSpecHandle);
@@ -112,6 +120,40 @@ AActor* UWProjectilePoolSubsystem::CreateNewPooledInstance(TSubclassOf<AActor> P
 		*ProjectileClass->GetName(), Pool.AllActors.Num());
 
 	return NewActor;
+}
+
+AActor* UWProjectilePoolSubsystem::RecycleOldestActiveInstance(FActorPool& Pool,
+                                                              const FTransform& SpawnTransform,
+                                                              const FGameplayEffectSpecHandle& DamageSpecHandle)
+{
+	// AllActors 按创建顺序保存，从最旧（下标 0）往新遍历：
+	//  - 失效弱引用：顺手清理，避免死指针污染容量计数；
+	//  - 处于 Free（空闲）状态的：跳过（本分支进入时通常已空，这里仅作保险）；
+	//  - 第一个仍然有效的活跃实例：复位其池状态后作为新发射体复用。
+	for (int32 i = 0; i < Pool.AllActors.Num(); ++i)
+	{
+		TWeakObjectPtr<AActor> WeakActor = Pool.AllActors[i];
+		AActor* Actor = WeakActor.Get();
+		if (!Actor)
+		{
+			Pool.AllActors.RemoveAt(i);
+			--i; // 抵消自减，继续遍历
+			continue;
+		}
+
+		if (Pool.FreeActors.Contains(WeakActor))
+		{
+			continue;
+		}
+
+		// 找到一个活跃实例：复位并复用（OnAcquiredFromPool 内部已清旧定时器/速度/Overlap 状态）。
+		if (Actor->Implements<UProjectilePoolableInterface>())
+		{
+			IProjectilePoolableInterface::Execute_OnAcquiredFromPool(Actor, SpawnTransform, DamageSpecHandle);
+		}
+		return Actor;
+	}
+	return nullptr;
 }
 
 void UWProjectilePoolSubsystem::ReleaseProjectile(AActor* Projectile)
